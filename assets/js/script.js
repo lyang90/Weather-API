@@ -6,6 +6,8 @@ const buttonSearch = $("#search");
 const todayCard = $(".today");
 const cards = $(".cards");
 
+let cityArray = JSON.parse(localStorage.getItem("Cities")) || [];
+
 // getting list of 5 day forecasts
 function get5DayForecast(list, today) {
     //Receives a list of the 40 forecasts and returns up to 5, 1 for each day.
@@ -13,13 +15,14 @@ function get5DayForecast(list, today) {
     let prevDay = null;
     let finalList = [];
     let curForecast = null;
+    let index = 0;
     list.forEach((forecast) => {
         const dateOriginal = forecast.dt_txt; //Date like "2024-06-09 03:00:00", we want (6/9/2024)
         const dateObject = dayjs(dateOriginal);
         const day = dateObject.$D;
         const hour = dateObject.$H;
-        //Get the forecast at 12PM, TODO: what if the last day < 12PM
-        if (day != today && hour === 12 && (!day || day != prevDay)) {
+        //Get the forecast at 12PM
+        if (day != today && (hour === 12 || (hour < 12 && index == 39)) && (!day || day != prevDay)) {
             prevDay = day;
             formattedForecast = {
                 date: `${parseInt(dateObject.$M) + 1}/${dateObject.$D}/${dateObject.$y}`,
@@ -30,11 +33,13 @@ function get5DayForecast(list, today) {
             }
             finalList.push(formattedForecast);
         }
+        index++;
     });
     console.log(finalList);
     return finalList;
 }
 
+// functions creates the 5 day forecast cards
 function createForecastCards(daysForecast) {
     cards.empty();
     //date, temp, humidity, icon, speed
@@ -64,6 +69,31 @@ function createForecastCards(daysForecast) {
         cards.append(cardDiv);
         console.log("Updated 5 day foreast.");
     });
+}
+
+function initializeHistory(){
+    cityArray.forEach((city) => {
+        drawCityButton(city);
+    })
+}
+
+function drawCityButton(name){
+    const parentEl = $('#city-buttons'); // selecting element to add it to
+    const cityButton = $('<button>').addClass("btn btn-secondary w-100 mb-3").text(name); // creating a new button for the city
+    cityButton.click(handleSearchHistoryClicked);
+    parentEl.append(cityButton); //adding it the right element
+}
+
+//the function for creating the search history
+function createCityButton(name) {
+    //We check that the city isn't already in the history
+    const cityAdded = cityArray.includes(name);
+
+    if (!cityAdded) {
+        drawCityButton(name);
+        cityArray.push(name); // keeping track of the cityNames 
+        localStorage.setItem('Cities', JSON.stringify(cityArray));
+    }
 }
 
 // the function uses the coordinates and name of the city to get the weather of the city
@@ -107,17 +137,38 @@ async function searchCity(name, lat, lon) {
 
     todayCard.empty();
     todayCard.append(parentDiv);
-    console.log("Updated today's foreast.");
+    console.log(`Updated today's foreast for ${name}`);
 
     // Generating 5 day forecast
     const daysForecast = get5DayForecast(forecast.list, dateObject.$D);
     createForecastCards(daysForecast);
 }
 
+function handleSearchHistoryClicked(event) {
+    event.preventDefault();
+    //searchCoords
+    //searchCity and add the forecasts
+    const buttonText = $(this).text();
+    console.log(`Searching for city: ${buttonText} from history.`);
+    searchCoords(buttonText);
+}
+
+async function handleButtonClicked() {
+    //searchCoords
+    //searchCity and add the forecasts
+    //Add button to history
+    const cityInput = $("#input-city").val();
+    console.log(`Searching for city: ${cityInput} from input.`);
+    const cityName = await searchCoords(cityInput);
+    console.log(`Adding button history for ${cityName}`);
+
+    // Generate search history
+    createCityButton(cityName);
+}
+
 // function to use API to get code and coordinates
-async function searchCoords() {
-    const cityInput = $("#input-city").val()
-    const finalURL = `${LatLonURL}+${cityInput}`
+async function searchCoords(cityInput) {
+    const finalURL = `${LatLonURL}+${cityInput}`;
     const response = await fetch(finalURL);
     const coords = await response.json();
     console.log(coords);
@@ -129,10 +180,12 @@ async function searchCoords() {
     const lat = coords[0].lat
     const lon = coords[0].lon
     const name = coords[0].name
-    console.log(name, lat, lon);
+    console.log(`Coordinates for ${name} are Lat: ${lat}, Lon:${lon}`);
     await searchCity(name, lat, lon);
+    return name;
 }
 
 $(document).ready(function () {
-    buttonSearch.click(searchCoords);
+    initializeHistory();
+    buttonSearch.click(handleButtonClicked);
 });
