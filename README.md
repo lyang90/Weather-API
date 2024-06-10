@@ -9,8 +9,8 @@ To install the weather-api project you can simply download it from github or jus
 ## Usage
 The weather webpage has various uses like displaying the weather of the current day, other information, the 5-day forecast, and the user's search history of cities so that they can go back to the city they would like the know the weather for. 
 
-![deployed webpage adding task](assets/images/TaskTab.png)
-![deployed webpage with added task](assets/images/TaskAdded.png)
+![deployed webpage adding task](assets/images/SearchCity.png)
+![deployed webpage with added task](assets/images/SearchCitydisplayed.png)
 
 
 ## Credits
